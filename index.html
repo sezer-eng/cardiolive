@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CardioLive">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<title>CardioLive — مراقب ECG</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+<style>
+:root{--bg:#050a12;--c:#0c1624;--ln:#ffffff14;--tx:#eaf3fa;--mu:#7d93a8;--ac:#2de08a;--rd:#ff4d6a;--am:#ffb43a;--bl:#4ca8ff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font-family:Tajawal,Tahoma,sans-serif;min-height:100vh;display:flex}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(700px 450px at 10% 10%,#2de08a16,transparent),radial-gradient(800px 500px at 90% 0,#4ca8ff1c,transparent),radial-gradient(700px 500px at 50% 110%,#ff4d6a14,transparent);animation:dr 20s ease-in-out infinite alternate}
+@keyframes dr{to{transform:scale(1.18) translateY(-25px)}}
+#nav{width:88px;position:sticky;top:0;height:100vh;padding:16px 10px;display:flex;flex-direction:column;gap:6px;border-inline-end:1px solid var(--ln);background:#070e18cc;backdrop-filter:blur(14px);z-index:5}
+.logo{font-size:30px;text-align:center;color:var(--rd);filter:drop-shadow(0 0 10px var(--rd));animation:bt 1.2s infinite;margin-bottom:10px}
+@keyframes bt{0%,100%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}}
+#nav button{background:none;border:0;color:var(--mu);font:inherit;font-size:11px;padding:10px 2px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+#nav button span{font-size:20px}
+#nav button.a{background:linear-gradient(160deg,#ffffff14,#ffffff06);color:var(--ac);box-shadow:inset 0 0 0 1px #ffffff14}
+main{flex:1;padding:18px;max-width:1240px;margin:auto;min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.top h1{font-size:24px;font-weight:800}
+.top h1 small{display:block;font-size:12px;font-weight:400;color:var(--mu);direction:ltr;text-align:right}
+.hd{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:7px;background:#0c1624cc;border:1px solid var(--ln);padding:7px 13px;border-radius:99px;font-size:13px;color:var(--mu)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mu)}
+.dot.on{background:var(--ac);box-shadow:0 0 10px var(--ac)}.dot.wait{background:var(--am)}.dot.err{background:var(--rd)}
+.hide{display:none!important}
+.pg{animation:pi .35s ease}@keyframes pi{from{opacity:0;transform:translateY(14px)}}
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}
+.card{background:linear-gradient(160deg,#101d2d99,#09111bcc);backdrop-filter:blur(12px);border:1px solid var(--ln);border-radius:22px;padding:16px;box-shadow:0 12px 40px #0006,inset 0 1px 0 #ffffff0c;position:relative}
+.card h3{font-size:14px;color:var(--mu);font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.mon{padding:0;overflow:hidden;box-shadow:0 0 0 1px #2de08a24,0 0 70px #2de08a14,0 12px 40px #0008}
+#cv{width:100%;height:min(48vh,400px);display:block;background:#04080e}
+.mon:fullscreen #cv{height:100vh}
+.tag{position:absolute;top:12px;right:14px;font-size:11px;color:var(--mu);background:#0b141dcc;padding:4px 10px;border-radius:8px;direction:ltr}
+#hrt{position:absolute;top:8px;left:14px;font-size:28px;color:var(--rd);filter:drop-shadow(0 0 8px var(--rd))}
+#hrt.on{animation:hb .35s}@keyframes hb{50%{transform:scale(1.4)}}
+#lo{display:none;position:absolute;inset:auto 14px 56px 14px;background:#ff4d6ae0;color:#fff;padding:8px 12px;border-radius:12px;font-weight:700;font-size:14px;text-align:center}
+.tb{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap}
+.tb button{background:#0b141ddd;border:1px solid var(--ln);color:var(--tx);font:inherit;font-size:12px;padding:6px 11px;border-radius:9px;cursor:pointer}
+.tb button.a{background:var(--ac);color:#04140c}.tb button.d{background:var(--rd);border:0}
+.hero{display:grid;place-items:center;text-align:center}
+.ring{position:relative;width:170px;height:170px}
+.ring svg{width:100%;height:100%}
+.rb{fill:none;stroke:#ffffff12;stroke-width:9}
+.rf{fill:none;stroke:var(--ac);stroke-width:9;stroke-linecap:round;stroke-dasharray:0 400;transition:stroke-dasharray .6s,stroke .6s}
+.ring div{position:absolute;inset:0;display:grid;place-content:center}
+.ring b{font-size:46px;font-weight:800;line-height:1;direction:ltr;text-shadow:0 0 24px currentColor}
+.ring small{color:var(--mu);font-size:12px}
+.kpi small{color:var(--mu);font-size:12px;display:block}
+.kpi b{font-size:30px;font-weight:800;direction:ltr;display:block;margin-top:4px}
+.kpi span{font-size:12px;color:var(--mu)}
+.bar{height:6px;border-radius:9px;background:#ffffff12;margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .5s}
+.txt{font-size:14px;line-height:1.9;color:#c8d7e3}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--ln);font-size:14px}
+.kv:last-child{border:0}.kv span{color:var(--mu)}.kv b{direction:ltr}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#070e18;padding:5px;border-radius:13px;margin-bottom:10px}
+.tabs button{background:none;border:0;color:var(--mu);font:inherit;font-weight:700;padding:9px 4px;border-radius:9px;cursor:pointer;font-size:13px}
+.tabs button.a{background:var(--ac);color:#04140c}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+input,select,textarea{width:100%;background:#070e18;border:1px solid var(--ln);color:var(--tx);border-radius:11px;padding:10px;font:inherit}
+input.l,.l{direction:ltr;text-align:left}
+input[type=range]{padding:0;accent-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{flex:1;min-width:100px;background:#16263a;border:1px solid var(--ln);color:var(--tx);font:inherit;font-weight:700;padding:11px;border-radius:11px;cursor:pointer}
+.btn.p{background:var(--ac);color:#04140c;border:0}.btn.d{background:var(--rd);border:0}
+.hint{font-size:12px;color:var(--mu);margin-top:10px;line-height:1.8}.hint b{color:var(--am)}
+canvas.ch{width:100%;display:block}
+.log{max-height:240px;overflow:auto;display:grid;gap:6px;align-content:start;font-size:13px}
+.log div{padding:7px 10px;border-radius:10px;background:#070e18;border-inline-start:3px solid var(--ac)}
+.log .r{border-color:var(--rd)}.log .a{border-color:var(--am)}.log .b{border-color:var(--bl)}
+.log time{color:var(--mu);direction:ltr;display:inline-block;margin-inline-end:8px;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:9px 6px;border-bottom:1px solid var(--ln);text-align:right}th{color:var(--mu);font-weight:500}
+td.l{direction:ltr;text-align:left;color:var(--ac)}
+.pin{display:flex;gap:10px;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--ln)}
+.pin i{width:12px;height:12px;border-radius:50%;flex:none}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
+@media(max-width:860px){
+ body{display:block}
+ #nav{position:fixed;inset:auto 0 0 0;width:100%;height:auto;flex-direction:row;gap:7px;padding:0 10px max(12px,env(safe-area-inset-bottom));border:0;background:none;backdrop-filter:none;justify-content:space-between}
+ #nav button{flex:1;min-width:0;background:#0c1624f2;border:1px solid var(--ln);border-radius:18px;box-shadow:0 8px 24px #000a;padding:9px 0}.logo{display:none}
+ main{padding:14px 12px 130px}
+ .bento{grid-template-columns:1fr 1fr}.s3,.s4{grid-column:span 2}
+ .top h1{font-size:20px}
+}
+@media(max-width:520px){.s2{grid-column:span 2}}
+@media print{#nav,.tb,.btn,.top .hd{display:none!important}:root{--tx:#000;--mu:#555;--bg:#fff}body::before{display:none}.card{background:#fff!important;box-shadow:none;border:1px solid #bbb}}
+</style>
+</head>
+<body>
+<nav id="nav">
+ <div class="logo">♥</div>
+ <button data-p="live" class="a"><span>📈</span>المراقبة</button>
+ <button data-p="ana"><span>📊</span>التحليل</button>
+ <button data-p="spo"><span>🫁</span>الأوكسجين</button>
+ <button data-p="pat"><span>🧑‍⚕️</span>المريض</button>
+ <button data-p="dev"><span>🔌</span>الجهاز</button>
+ <button data-p="rep"><span>📄</span>التقرير</button>
+ <button data-p="lrn"><span>📚</span>التعلّم</button>
+</nav>
+<main>
+<div class="top">
+ <h1><span id="ttl">المراقبة المباشرة</span><small>CardioLive · ESP32 + AD8232</small></h1>
+ <div class="hd"><div class="pill" id="chip">👤 مريض تجريبي</div><div class="pill l" id="clk">--:--:--</div><div class="pill"><span class="dot" id="dot"></span><span id="stx">محاكاة</span></div></div>
+</div>
+
+<!-- LIVE -->
+<section id="s-live" class="pg bento">
+ <div class="card mon s3">
+  <canvas id="cv"></canvas>
+  <div class="tag">Lead II · 25 mm/s · 10 mm/mV</div>
+  <div id="hrt">♥</div>
+  <div id="lo">⚠ الأقطاب غير ملامسة للجسم</div>
+  <div class="tb"><button id="bBeep">🔔 صوت</button><button id="bCol">🎨 لون</button><button id="pause">⏸ إيقاف</button><button id="snap">📷 صورة</button></div>
+ </div>
+ <div class="card hero">
+  <h3>معدل النبض</h3>
+  <div class="ring"><svg viewBox="0 0 120 120"><circle class="rb" cx="60" cy="60" r="52"/><circle id="rg" class="rf" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/></svg><div><b id="bpm">--</b><small>BPM</small></div></div>
+  <div id="zone" class="txt" style="margin-top:8px">--</div>
+ </div>
+ <div class="card kpi"><small>فاصل R-R</small><b id="rr">--</b><span>ms</span></div>
+ <div class="card kpi"><small>الإيقاع</small><b id="cls" style="font-size:22px;padding:6px 0">--</b><span id="cnt">0 نبضة</span></div>
+ <div class="card kpi"><small>جودة الإشارة</small><b id="q">--</b><div class="bar"><i id="qb"></i></div></div>
+ <div class="card kpi"><small>مدة الجلسة</small><b id="tm">00:00</b><span id="srcl">محاكاة</span></div>
+ <div class="card s4"><h3>💓 موجة PPG من الإصبع · الأوكسجين <b id="lsp" style="color:var(--bl)">--</b>%</h3><canvas id="pp" class="ch" style="height:90px"></canvas></div>
+ <div class="card s4"><h3>🩺 التفسير التلقائي</h3><div class="txt" id="interp">بانتظار إشارة...</div></div>
+</section>
+
+<!-- ANALYSIS -->
+<section id="s-ana" class="pg bento hide">
+ <div class="card s2"><h3>اتجاه النبض (آخر دقيقتين)</h3><canvas id="tr" class="ch" style="height:170px"></canvas></div>
+ <div class="card s2"><h3>مخطط بوانكاريه — انتظام النبض</h3><canvas id="pc" class="ch" style="height:170px"></canvas></div>
+ <div class="card s2"><h3>مؤشرات النبض</h3>
+  <div class="kv"><span>المتوسط</span><b id="aAvg">--</b></div><div class="kv"><span>الأدنى</span><b id="aMin">--</b></div><div class="kv"><span>الأعلى</span><b id="aMax">--</b></div><div class="kv"><span>متوسط R-R</span><b id="aRR">--</b></div></div>
+ <div class="card s2"><h3>تقلب النبض HRV</h3>
+  <div class="kv"><span>SDNN</span><b id="aSd">--</b></div><div class="kv"><span>RMSSD</span><b id="aRm">--</b></div><div class="kv"><span>pNN50</span><b id="aPn">--</b></div><div class="kv"><span>عدد النبضات</span><b id="aBt">0</b></div></div>
+ <div class="card s4"><h3>ماذا تعني؟</h3><div class="txt"><b>SDNN</b> يقيس التباين الكلي بين النبضات. <b>RMSSD</b> يعكس نشاط العصب الحائر (الاسترخاء). <b>pNN50</b> نسبة الفروق الكبيرة بين نبضتين متتاليتين. في مخطط بوانكاريه، النقاط المتجمعة بشكل بيضوي ضيق تعني إيقاعاً منتظماً، والمبعثرة تعني عدم انتظام.</div></div>
+</section>
+
+<section id="s-spo" class="pg bento hide">
+ <div class="card hero s2"><h3>نسبة الأوكسجين SpO2</h3>
+  <div class="ring"><svg viewBox="0 0 120 120"><circle class="rb" cx="60" cy="60" r="52"/><circle id="sg" class="rf" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/></svg><div><b id="sv">--</b><small>%</small></div></div>
+  <div id="sz" class="txt" style="margin-top:8px">--</div></div>
+ <div class="card s2"><h3>MAX30102 · الإصبع</h3>
+  <div class="kv"><span>نبض الإصبع (PPG)</span><b id="pB">--</b></div>
+  <div class="kv"><span>نبض القلب (ECG)</span><b id="pE">--</b></div>
+  <div class="kv"><span>فرق النبض بينهم</span><b id="pD">--</b></div>
+  <div class="kv"><span>زمن الوصول PTT</span><b id="pT">--</b></div>
+  <div class="kv"><span>الإصبع</span><b id="pF">--</b></div></div>
+ <div class="card s4"><h3>موجة PPG المباشرة</h3><canvas id="pp2" class="ch" style="height:170px"></canvas></div>
+ <div class="card s2"><h3>اتجاه SpO2</h3><canvas id="str" class="ch" style="height:130px"></canvas></div>
+ <div class="card s2"><h3>كيف تقرأها؟</h3><div class="txt"><b>95–100%</b> طبيعي. <b>90–94%</b> أقل من الطبيعي. <b>أقل من 90%</b> يحتاج تقييماً طبياً. زمن PTT هو الفرق بين نبضة القلب ووصولها للإصبع، وهو مؤشر تعليمي ولا يقيس ضغط الدم. القراءة تقريبية وتتأثر بحركة الإصبع وبرودته وطلاء الأظافر.</div></div>
+</section>
+
+<!-- PATIENT -->
+<section id="s-pat" class="pg bento hide">
+ <div class="card s2"><h3>بيانات المريض</h3>
+  <label>الاسم</label><input id="pName" placeholder="الاسم الكامل">
+  <div class="g2"><div><label>العمر</label><input id="pAge" type="number" min="1" max="120" class="l"></div><div><label>الجنس</label><select id="pSex"><option value="">—</option><option>ذكر</option><option>أنثى</option></select></div>
+  <div><label>الوزن (kg)</label><input id="pW" type="number" class="l"></div><div><label>الطول (cm)</label><input id="pH" type="number" class="l"></div></div>
+  <label>ملاحظات</label><textarea id="pNote" rows="3"></textarea>
+ </div>
+ <div class="card s2"><h3>مؤشرات محسوبة</h3>
+  <div class="kv"><span>مؤشر كتلة الجسم BMI</span><b id="pBmi">--</b></div>
+  <div class="kv"><span>التصنيف</span><b id="pCat">--</b></div>
+  <div class="kv"><span>أقصى نبض (220 − العمر)</span><b id="pMax">--</b></div>
+  <div class="kv"><span>نبض الراحة الطبيعي</span><b>60 – 100</b></div>
+  <div class="kv"><span>منطقة التمرين المعتدل</span><b id="pZn">--</b></div>
+  <div class="hint">البيانات تُحفظ في متصفحك فقط ولا تُرسل لأي خادم.</div>
+ </div>
+</section>
+
+<!-- DEVICE -->
+<section id="s-dev" class="pg bento hide">
+ <div class="card s2"><h3>مصدر البيانات</h3>
+  <div class="tabs"><button data-m="sim" class="a">محاكاة</button><button data-m="ws">شبكة محلية</button><button data-m="mqtt">إنترنت</button></div>
+  <div id="p-sim">
+   <label>نوع الإيقاع</label><select id="rhythm"><option value="normal">طبيعي (Normal Sinus)</option><option value="afib">رجفان أذيني (AFib)</option><option value="pvc">انقباضات بطينية مبكرة (PVC)</option><option value="st">ارتفاع قطعة ST</option></select>
+   <label>النبض: <b id="bpmv">72</b></label><input type="range" id="sbpm" min="40" max="180" value="72">
+   <label>الضجيج: <b id="nsv">20</b>%</label><input type="range" id="noise" min="0" max="100" value="20">
+   <label>الأوكسجين (محاكاة): <b id="sspv">97</b>%</label><input type="range" id="ssp" min="80" max="100" value="97">
+  </div>
+  <div id="p-ws" class="hide"><label>عنوان ESP32 (IP)</label><input id="ip" class="l" placeholder="192.168.1.50"><label>المنفذ</label><input id="port" class="l" value="81">
+   <div class="hint">يعمل عندما يكون جهازك <b>على نفس واي فاي</b> الـ ESP32. شغّل الملف من جهازك أو من خادم http (وليس https).</div></div>
+  <div id="p-mqtt" class="hide"><label>خادم MQTT (WebSocket)</label><input id="broker" class="l"><label>Topic</label><input id="topic" class="l">
+   <div class="hint">يعمل من <b>أي شبكة</b>. اجعل الـ Topic فريداً ومطابقاً لكود ESP32.</div></div>
+  <div class="row"><button class="btn p" id="go">اتصال / تشغيل</button></div>
+ </div>
+ <div class="card s2"><h3>إعدادات العرض</h3>
+  <label>التكبير: <b id="gv">1.0</b>x</label><input type="range" id="gain" min="0.3" max="3" step="0.1" value="1">
+  <label>عرض الشاشة</label><select id="sec"><option value="4">4 ثواني</option><option value="6">6 ثواني</option><option value="8">8 ثواني</option></select>
+  <label>معدل العينات Hz (يطابق ESP32)</label><input id="rate" type="number" min="50" max="1000" class="l">
+  <div class="hint">صيغ الإرسال: رقم <b>2048</b> — أو <b>2048,2051,2060</b> — أو <b>{"v":2048}</b> — والكلمة <b>LO</b> للأقطاب المفصولة. لحساس MAX30102 أرسل <b>{"v":2048,"ir":80000,"red":70000}</b> بمعدل 100Hz.</div>
+ </div>
+ <div class="card s2"><h3>تشخيص النظام</h3>
+  <div class="kv"><span>الحالة</span><b id="dSt">--</b></div><div class="kv"><span>الحزم/ثانية</span><b id="dPk">0</b></div>
+  <div class="kv"><span>آخر حزمة منذ</span><b id="dAge">--</b></div><div class="kv"><span>العينات المستلمة</span><b id="dN">0</b></div>
+  <div class="kv"><span>حجم النافذة</span><b id="dBuf">--</b></div></div>
+ <div class="card s2"><h3>توصيل AD8232 مع ESP32</h3>
+  <div class="pin"><i style="background:#ff4d6a"></i>OUTPUT ← GPIO34</div><div class="pin"><i style="background:#4ca8ff"></i>3.3V ← 3V3</div><div class="pin"><i style="background:#7d93a8"></i>GND ← GND</div>
+  <div class="pin"><i style="background:#ffb43a"></i>LO+ ← GPIO32 · LO− ← GPIO33</div>
+  <div class="pin"><i style="background:#c06bff"></i>MAX30102: SDA ← GPIO21 · SCL ← GPIO22 · VIN ← 3V3</div><div class="hint">الأقطاب: <b>الأحمر RA</b> أسفل الترقوة اليمنى، <b>الأصفر LA</b> أسفل الترقوة اليسرى، <b>الأخضر RL</b> أسفل الأضلاع اليسرى. شغّل الجهاز على بطارية وليس موصولاً بشاحن الكهرباء.</div></div>
+</section>
+
+<!-- REPORT -->
+<section id="s-rep" class="pg bento hide">
+ <div class="card s2"><h3>ملخص الجلسة</h3>
+  <div class="kv"><span>المريض</span><b id="rP">--</b></div><div class="kv"><span>التاريخ</span><b id="rDt">--</b></div><div class="kv"><span>المدة</span><b id="rD">--</b></div>
+  <div class="kv"><span>متوسط النبض</span><b id="rA">--</b></div><div class="kv"><span>الأدنى / الأعلى</span><b id="rM">--</b></div><div class="kv"><span>عدد النبضات</span><b id="rB">0</b></div><div class="kv"><span>المصدر</span><b id="rS">--</b></div><div class="kv"><span>متوسط الأوكسجين</span><b id="rO">--</b></div>
+  <div class="row"><button class="btn p" id="prt">🖨 طباعة التقرير</button><button class="btn" id="snap2">📷 صورة الموجة</button></div></div>
+ <div class="card s2"><h3>سجل الأحداث</h3><div id="log" class="log"></div></div>
+</section>
+
+<!-- LEARN -->
+<section id="s-lrn" class="pg bento hide">
+ <div class="card s4"><h3>تشريح النبضة الواحدة</h3><canvas id="ln" class="ch" style="height:210px"></canvas></div>
+ <div class="card s2"><h3>القيم الطبيعية</h3><table>
+  <tr><th>الموجة</th><th>المعنى</th><th>الطبيعي</th></tr>
+  <tr><td>P</td><td>تقلص الأذينين</td><td class="l">&lt; 0.12 s</td></tr>
+  <tr><td>PR</td><td>انتقال الإشارة للبطين</td><td class="l">0.12–0.20 s</td></tr>
+  <tr><td>QRS</td><td>تقلص البطينين</td><td class="l">&lt; 0.12 s</td></tr>
+  <tr><td>ST</td><td>بدء استرخاء البطين</td><td class="l">isoelectric</td></tr>
+  <tr><td>QT</td><td>دورة البطين كاملة</td><td class="l">0.35–0.44 s</td></tr>
+ </table></div>
+ <div class="card s2"><h3>أنواع الإيقاع</h3><div class="txt">
+  <b>طبيعي:</b> 60–100 نبضة بانتظام.<br><b>تسرع:</b> أكثر من 100.<br><b>بطء:</b> أقل من 60.<br>
+  <b>رجفان أذيني:</b> فواصل عشوائية وغياب موجة P.<br><b>PVC:</b> نبضة مبكرة عريضة تتبعها استراحة.<br><b>ارتفاع ST:</b> علامة تحتاج تقييماً طبياً عاجلاً مع الأعراض.</div></div>
+ <div class="card s4"><h3>⚠ تنبيه</h3><div class="txt">هذا النظام مشروع تعليمي. حساس AD8232 ليس جهازاً طبياً معتمداً، ولا يصلح للتشخيص. عند ألم الصدر أو الإغماء أو ضيق النفس راجع الطوارئ فوراً.</div></div>
+</section>
+<footer>CardioLive · مشروع هندسي · ESP32 + AD8232</footer>
+</main>
+
+<script>
+const $=id=>document.getElementById(id),T=(id,v)=>{$(id).textContent=v},rnd=()=>Math.random().toString(36).slice(2,8),pad=v=>String(v).padStart(2,'0');
+let S={mode:'sim',rate:250,sec:6,gain:1,bpm:72,noise:20,rhythm:'normal',spo:97,ip:'192.168.1.50',port:'81',broker:'wss://broker.hivemq.com:8884/mqtt',topic:'ecg/'+rnd()};
+let P={name:'',age:'',sex:'',w:'',h:'',note:''};
+try{Object.assign(S,JSON.parse(localStorage.getItem('cl_S')||'{}'));Object.assign(P,JSON.parse(localStorage.getItem('cl_P')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('cl_S',JSON.stringify(S));localStorage.setItem('cl_P',JSON.stringify(P))}catch(e){}};
+
+/* ---- pipeline ---- */
+let N,buf,w=0,n=0,base=null,env=60,paused=false,LO=false,nz=0,yp=0;
+let NP,pbuf,pw=0,PR=100,pdI=0,pdR=0,qI=0,qR=0,pEnv=60,spo=0,spoS=0,spoD=0,spoDT=0,spoH=[],ppgRR=[],ppgLast=-9,pAbove=false,pn=0,ptt=[],lastR=0,finger=true,pBeats=0,spoSum=0,spoCnt=0,simP=0;
+let rrs=[],allRR=[],hist=[],lastPk=-9,above=false,beats=0,lastBeat=0;
+let sumB=0,cntB=0,minB=999,maxB=0,t0=Date.now(),pk=0,pkRate=0,lastPkT=0,pk0=0;
+let rec=false,recBuf=[],COLS=['#2de08a','#4ca8ff','#ffb43a','#e6f0f7'],ci=0,COL=COLS[0],beep=false,ac=null,lastLog={};
+function initBuf(){N=Math.round(S.rate*S.sec);buf=new Float32Array(N);w=0;NP=Math.round(PR*S.sec);pbuf=new Float32Array(NP);pw=0}
+function resetStats(){rrs=[];allRR=[];hist=[];spoH=[];ppgRR=[];ptt=[];pdI=0;pdR=0;qI=0;qR=0;spo=0;spoS=0;pn=0;pBeats=0;ppgLast=-9;spoSum=0;spoCnt=0;pEnv=60;pbuf&&pbuf.fill(0);lastPk=-9;above=false;beats=0;base=null;env=60;n=0;lastBeat=0;sumB=0;cntB=0;minB=999;maxB=0;t0=Date.now();nz=0;buf&&buf.fill(0)}
+function push(x){
+ if(base===null)base=x;
+ base+=(x-base)*0.003;
+ const c=x-base;env=Math.max(env*0.9998,Math.abs(c),30);
+ const y=c/env;
+ if(Math.abs(y)<.25)nz+=(Math.abs(y-yp)-nz)*.01;yp=y;
+ buf[w]=y;w=(w+1)%N;n++;if(rec)recBuf.push(x);
+ const t=n/S.rate;
+ if(y>0.5){if(!above&&t-lastPk>0.3){above=true;
+  if(lastPk>0){const r=t-lastPk;if(r<2){rrs.push(r);if(rrs.length>8)rrs.shift();allRR.push(r);if(allRR.length>150)allRR.shift()}}
+  lastPk=t;beats++;lastBeat=performance.now();lastR=S.mode==='sim'?t*1000:lastBeat;pulse()}}
+ else if(y<0.3)above=false;
+}
+
+/* ---- simulator ---- */
+const G=(t,a,c,w)=>a*Math.exp(-((t-c)**2)/(2*w*w));
+let ph=0,rrCur=60/72,bType=0,bCount=0,TT=0;
+function nextBeat(){bCount++;let rr=60/S.bpm;bType=0;
+ if(S.rhythm==='afib')rr*=0.65+Math.random()*0.7;else rr*=1+(Math.random()-.5)*0.04;
+ if(S.rhythm==='pvc'){if(bCount%6===0){bType=1;rr*=0.68}else if(bCount%6===1)rr*=1.32}
+ rrCur=rr}
+function wave(t,bt,rh){
+ if(bt===1)return G(t,1.2,.30,.045)+G(t,-.5,.62,.08);
+ let v=G(t,1,.31,.012)+G(t,-.12,.285,.010)+G(t,-.25,.335,.012)+G(t,.3,.55,.045);
+ if(rh!=='afib')v+=G(t,.12,.18,.025);
+ if(rh==='st')v+=G(t,.22,.43,.06);
+ return v}
+function simSample(){
+ const dt=1/S.rate;TT+=dt;ph+=dt/rrCur;if(ph>=1){ph-=1;nextBeat()}
+ let v=wave(ph,bType,S.rhythm)+0.05*Math.sin(2*Math.PI*0.3*TT);
+ if(S.rhythm==='afib')v+=0.04*Math.sin(2*Math.PI*7*TT)+0.03*Math.sin(2*Math.PI*11*TT);
+ v+=(Math.random()-.5)*(S.noise/100)*0.25;
+ return 2000+v*600}
+
+/* ---- PPG / SpO2 ---- */
+function simPPG(){
+ const t=(ph-.32+1)%1,A=1500,R=(110-(S.spo+Math.sin(TT/9)*.8))/25;
+ const v=G(t,1,.25,.08)+G(t,.3,.5,.07)+(Math.random()-.5)*(S.noise/100)*.15;
+ pushPPG(80000-v*A,70000-v*A*R*.875)}
+function pushPPG(ir,red){
+ if(!pdI){pdI=ir;pdR=red}
+ pdI+=(ir-pdI)*.02;pdR+=(red-pdR)*.02;finger=ir>20000;
+ const ai=ir-pdI,ar=red-pdR;qI+=(ai*ai-qI)*.01;qR+=(ar*ar-qR)*.01;
+ pEnv=Math.max(pEnv*.9997,Math.abs(ai),20);
+ const y=-ai/pEnv;pbuf[pw]=y;pw=(pw+1)%NP;pn++;
+ const t=pn/PR;
+ if(y>.45){if(!pAbove&&t-ppgLast>.35){pAbove=true;
+  if(ppgLast>0){const r=t-ppgLast;if(r<2){ppgRR.push(r);if(ppgRR.length>8)ppgRR.shift()}}
+  ppgLast=t;pBeats++;
+  const d=(S.mode==='sim'?t*1000:performance.now())-lastR;if(lastR&&d>80&&d<600){ptt.push(d);if(ptt.length>10)ptt.shift()}}}
+ else if(y<.2)pAbove=false}
+function spoTick(){
+ let s=0;
+ if(performance.now()-spoDT<3000)s=spoD;
+ else if(qI>1&&qR>0&&pdI>0&&pdR>0&&finger&&pn>PR*2){const R=(Math.sqrt(qR)/pdR)/(Math.sqrt(qI)/pdI);s=Math.max(70,Math.min(100,110-25*R))}
+ if(s){spoS=spoS?spoS+(s-spoS)*.3:s;spo=Math.round(spoS)}else spo=0;
+ const ok=spo>0;T('sv',ok?spo:'--');T('lsp',ok?spo:'--');
+ let col='var(--ac)',z='طبيعي';if(spo<90){col='var(--rd)';z='منخفض — يحتاج انتباه'}else if(spo<95){col='var(--am)';z='أقل من الطبيعي'}
+ $('sv').style.color=ok?col:'';$('sg').style.stroke=col;$('sg').style.strokeDasharray=ok?((spo-70)/30*326.7)+' 400':'0 400';
+ T('sz',ok?z:(finger?'بانتظار إشارة...':'ضع الإصبع على الحساس'));
+ const pb=ppgRR.length>1?Math.round(60/(ppgRR.reduce((a,b)=>a+b,0)/ppgRR.length)):0,eo=curBpm&&performance.now()-curT<3000;
+ T('pB',pb||'--');T('pE',eo?curBpm:'--');T('pD',pb&&eo?Math.abs(pb-curBpm)+' BPM':'--');
+ T('pT',ptt.length?Math.round(ptt.reduce((a,b)=>a+b,0)/ptt.length)+' ms':'--');
+ T('pF',S.mode==='sim'||finger?'✓ مكتشف':'✗ غير موجود');
+ if(ok){spoSum+=spo;spoCnt++;if(spo<94)addLog('نقص أوكسجين: '+spo+'%','r')}}
+function drawP(id){const c=$(id);if(!c||!c.clientWidth||!pbuf)return;
+ const d=devicePixelRatio||1,W=Math.round(c.clientWidth*d),H=Math.round(c.clientHeight*d);if(c.width!==W||c.height!==H){c.width=W;c.height=H}
+ const x=c.getContext('2d');x.clearRect(0,0,W,H);
+ x.strokeStyle='#ffffff0d';x.lineWidth=d;for(let i=1;i<10;i++){x.beginPath();x.moveTo(i*W/10,0);x.lineTo(i*W/10,H);x.stroke()}
+ x.strokeStyle='#ff4d6a';x.shadowColor='#ff4d6a';x.shadowBlur=8*d;x.lineWidth=2*d;x.beginPath();let up=false;const gap=Math.round(NP*.025);
+ for(let i=0;i<NP;i++){if((i-pw+NP)%NP<gap){up=false;continue}const X=i/NP*W,Y=H/2-Math.max(-1.4,Math.min(1.4,pbuf[i]))*H*.4;up?x.lineTo(X,Y):x.moveTo(X,Y);up=true}
+ x.stroke()}
+
+/* ---- connections ---- */
+let ws=null,mq=null,wantConn=false,live=false,simClock=0;
+function setSt(t,c){T('stx',t);$('dot').className='dot '+(c||'');T('dSt',t)}
+function lead(b){LO=b;$('lo').style.display=b?'block':'none';if(b)addLog('الأقطاب غير ملامسة للجسم','r')}
+function parse(s){
+ if(paused||S.mode==='sim')return;
+ pk++;lastPkT=performance.now();
+ s=String(s).trim();
+ if(s==='LO'||s==='!'){lead(true);return}
+ let vals=[];
+ if(s[0]==='{'){try{const o=JSON.parse(s);if(o.lo){lead(true);return}const v=o.v!==undefined?o.v:o.ecg;if(o.ir!==undefined&&o.red!==undefined)pushPPG(+o.ir,+o.red);if(o.spo2){spoD=+o.spo2;spoDT=performance.now()}vals=v===undefined?[]:Array.isArray(v)?v:[v]}catch(e){return}}
+ else vals=s.split(/[\s,;]+/).map(Number);
+ lead(false);for(const v of vals)if(isFinite(v))push(v)}
+function stopConn(){wantConn=false;live=false;
+ if(ws){try{ws.onclose=null;ws.close()}catch(e){}ws=null}
+ if(mq){try{mq.end(true)}catch(e){}mq=null}}
+function connWS(){if(!wantConn)return;setSt('جاري الاتصال...','wait');
+ try{ws=new WebSocket('ws://'+S.ip+':'+S.port)}catch(e){setSt('فشل الاتصال','err');return}
+ ws.onopen=()=>{live=true;setSt('متصل بـ ESP32','on')};
+ ws.onmessage=e=>parse(e.data);
+ ws.onerror=()=>setSt('خطأ بالاتصال','err');
+ ws.onclose=()=>{live=false;if(wantConn){setSt('انقطع... إعادة محاولة','wait');setTimeout(connWS,2000)}}}
+function connMQ(){
+ if(typeof mqtt==='undefined'){setSt('مكتبة MQTT لم تُحمّل','err');return}
+ setSt('جاري الاتصال...','wait');
+ mq=mqtt.connect(S.broker,{clientId:'cl_'+rnd(),reconnectPeriod:2000,connectTimeout:8000});
+ mq.on('connect',()=>{mq.subscribe(S.topic);live=true;setSt('متصل · بانتظار ESP32','on')});
+ mq.on('message',(t,m)=>{setSt('استقبال بيانات','on');parse(m.toString())});
+ mq.on('reconnect',()=>setSt('إعادة الاتصال...','wait'));
+ mq.on('error',()=>setSt('خطأ بالاتصال','err'))}
+function start(){stopConn();initBuf();resetStats();lead(false);
+ T('srcl',{sim:'محاكاة',ws:'شبكة محلية',mqtt:'إنترنت MQTT'}[S.mode]);
+ if(S.mode==='sim'){setSt('وضع المحاكاة','on');return}
+ wantConn=true;S.mode==='ws'?connWS():connMQ()}
+
+/* ---- main ECG canvas ---- */
+const cv=$('cv'),ctx=cv.getContext('2d');
+function fit(){const d=devicePixelRatio||1;cv.width=cv.clientWidth*d;cv.height=cv.clientHeight*d}
+new ResizeObserver(fit).observe(cv);
+function draw(){
+ const W=cv.width,H=cv.height,d=devicePixelRatio||1;if(!W)return;
+ ctx.clearRect(0,0,W,H);const mm=W/(S.sec*25);ctx.lineWidth=1;
+ for(let x=0,i=0;x<W;x+=mm,i++){ctx.strokeStyle=i%5?'#0e202d':'#173447';ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+ for(let y=H/2%mm,i=0;y<H;y+=mm,i++){ctx.strokeStyle=i%5?'#0e202d':'#173447';ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ const gap=Math.round(N*0.025),k=H*0.38*S.gain;
+ ctx.lineWidth=2*d;ctx.lineJoin='round';ctx.strokeStyle=COL;ctx.shadowColor=COL;ctx.shadowBlur=9*d;
+ ctx.beginPath();let pen=false;
+ for(let i=0;i<N;i++){if((i-w+N)%N<gap){pen=false;continue}
+  const x=i/N*W,y=H/2-Math.max(-1.6,Math.min(1.6,buf[i]))*k;
+  if(!pen){ctx.moveTo(x,y);pen=true}else ctx.lineTo(x,y)}
+ ctx.stroke();ctx.shadowBlur=0;
+ ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(w/N*W,H/2-buf[(w-1+N)%N]*k,3.5*d,0,7);ctx.fill()}
+let last=performance.now();
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
+ if(!paused&&S.mode==='sim'){simClock+=dt*S.rate;while(simClock>=1){push(simSample());simClock--}simP+=dt*PR;while(simP>=1){simPPG();simP--}}
+ draw();drawP('pp');drawP('pp2');requestAnimationFrame(frame)}
+
+/* ---- stats ---- */
+const INT={n:'إيقاع جيبي طبيعي: النبض بين 60 و100 والفواصل منتظمة. هذه قراءة جيدة.',t:'تسرع قلب: النبض أعلى من 100. قد يكون طبيعياً مع الجهد أو القلق أو الكافيين، وإذا استمر في الراحة فاستشر طبيباً.',b:'بطء قلب: النبض أقل من 60. شائع عند الرياضيين، وإذا ترافق مع دوخة فراجع طبيباً.',i:'إيقاع غير منتظم: تباين كبير بين النبضات، يشبه الرجفان الأذيني أو النبضات المبكرة. هذه قراءة تعليمية وليست تشخيصاً.'};
+function zoneOf(bpm){const a=+P.age;if(!a)return'أدخل العمر لحساب المنطقة';const p=bpm/(220-a);return p<.5?'راحة':p<.7?'نشاط خفيف':p<.85?'نشاط معتدل':'جهد عالٍ'}
+setInterval(()=>{
+ const el=Math.floor((Date.now()-t0)/1000);T('tm',pad(el/60|0)+':'+pad(el%60));
+ const qv=n>S.rate&&!LO?Math.max(0,Math.min(100,Math.round(100-nz*500))):0;
+ T('q',n>S.rate?qv+'%':'--');$('qb').style.width=qv+'%';$('qb').style.background=qv>70?'var(--ac)':qv>40?'var(--am)':'var(--rd)';
+ const stale=performance.now()-lastBeat>3500||rrs.length<2;
+ T('cnt',beats+' نبضة');spoTick();
+ if(stale){['bpm','rr','aSd'].forEach(i=>T(i,'--'));T('cls','--');T('zone','--');$('rg').style.strokeDasharray='0 400';T('interp','بانتظار إشارة...');return}
+ const m=rrs.reduce((a,b)=>a+b,0)/rrs.length,bpm=Math.round(60/m),sd=Math.sqrt(rrs.reduce((a,b)=>a+(b-m)**2,0)/rrs.length)*1000;
+ let c='طبيعي',col='var(--ac)',k='n';
+ if(sd>120){c='غير منتظم';col='var(--rd)';k='i'}else if(bpm<60){c='بطيء';col='var(--bl)';k='b'}else if(bpm>100){c='سريع';col='var(--am)';k='t'}
+ T('bpm',bpm);T('rr',Math.round(rrs[rrs.length-1]*1000));T('cls',c);$('cls').style.color=col;
+ $('bpm').style.color=col;$('rg').style.stroke=col;$('rg').style.strokeDasharray=(Math.min(bpm,200)/200*326.7)+' 400';
+ T('zone',zoneOf(bpm));T('interp',INT[k]);
+ sumB+=bpm;cntB++;minB=Math.min(minB,bpm);maxB=Math.max(maxB,bpm);
+ curBpm=bpm;curT=performance.now();
+ if(k==='t')addLog('تسرع قلب: '+bpm+' BPM','r');else if(k==='b')addLog('بطء قلب: '+bpm+' BPM','b');else if(k==='i')addLog('إيقاع غير منتظم (SDNN '+Math.round(sd)+')','a');
+ T('aSd',Math.round(sd)+' ms');
+ const a=allRR;if(a.length>2){let s=0,p=0;for(let i=1;i<a.length;i++){const d=a[i]-a[i-1];s+=d*d;if(Math.abs(d)>.05)p++}
+  T('aRm',Math.round(Math.sqrt(s/(a.length-1))*1000)+' ms');T('aPn',Math.round(p/(a.length-1)*100)+'%')}
+},500);
+let curBpm=0,curT=0;
+setInterval(()=>{ // diagnostics + charts
+ pkRate=pk-pk0;pk0=pk;T('dPk',S.mode==='sim'?'—':pkRate);T('dN',n);T('dBuf',N+' عينة / '+S.sec+' s');
+ T('dAge',S.mode==='sim'||!lastPkT?'—':((performance.now()-lastPkT)/1000).toFixed(1)+' s');
+ if(performance.now()-curT<1500&&!paused){hist.push(curBpm);if(hist.length>120)hist.shift()}
+ T('aAvg',cntB?Math.round(sumB/cntB):'--');T('aMin',cntB?minB:'--');T('aMax',cntB?maxB:'--');
+ T('aRR',allRR.length?Math.round(allRR.reduce((a,b)=>a+b,0)/allRR.length*1000)+' ms':'--');T('aBt',beats);
+ if(spo){spoH.push(spo);if(spoH.length>120)spoH.shift()}
+ report();charts()},1000);
+
+/* ---- log / pulse ---- */
+function addLog(m,c){const now=Date.now();if(lastLog[m]&&now-lastLog[m]<15000)return;lastLog[m]=now;
+ const d=document.createElement('div');d.className=c||'';d.innerHTML='<time>'+new Date().toLocaleTimeString('en-GB')+'</time>'+m;
+ const L=$('log');L.prepend(d);while(L.children.length>60)L.lastChild.remove()}
+function pulse(){const h=$('hrt');h.classList.remove('on');void h.offsetWidth;h.classList.add('on');
+ if(beep){try{ac=ac||new AudioContext();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.value=.05;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.06)}catch(e){}}}
+
+/* ---- secondary charts ---- */
+function cs(id){const c=$(id);if(!c||!c.clientWidth)return null;const d=devicePixelRatio||1;c.width=c.clientWidth*d;c.height=c.clientHeight*d;return[c.getContext('2d'),c.width,c.height,d]}
+function charts(){
+ let r=cs('tr');
+ if(r){const[x,W,H,d]=r;if(hist.length>1){const mx=Math.max(...hist),mn=Math.min(...hist),lo=mn-5,hi=mx+5;
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,COL+'55');g.addColorStop(1,COL+'00');
+  x.beginPath();hist.forEach((v,i)=>{const px=i/119*W,py=H-(v-lo)/(hi-lo)*H;i?x.lineTo(px,py):x.moveTo(px,py)});
+  x.strokeStyle=COL;x.lineWidth=2*d;x.stroke();x.lineTo((hist.length-1)/119*W,H);x.lineTo(0,H);x.fillStyle=g;x.fill()}}
+ r=cs('pc');
+ if(r){const[x,W,H,d]=r;x.strokeStyle='#ffffff18';x.lineWidth=d;x.beginPath();x.moveTo(0,H);x.lineTo(W,0);x.stroke();
+  const a=allRR,lo=.3,hi=1.5;x.fillStyle=COL+'cc';
+  for(let i=1;i<a.length;i++){x.beginPath();x.arc((a[i-1]-lo)/(hi-lo)*W,H-(a[i]-lo)/(hi-lo)*H,3*d,0,7);x.fill()}}
+ r=cs('str');
+ if(r){const[x,W,H,d]=r;if(spoH.length>1){const lo=Math.min(88,...spoH)-1,hi=101;x.beginPath();spoH.forEach((v,i)=>{const px=i/119*W,py=H-(v-lo)/(hi-lo)*H;i?x.lineTo(px,py):x.moveTo(px,py)});x.strokeStyle='#4ca8ff';x.lineWidth=2*d;x.stroke()}}
+ r=cs('ln');
+ if(r){const[x,W,H,d]=r;const Y=t=>H*.68-wave(t,0,'normal')*H*.52;
+  x.strokeStyle='#ffffff10';x.lineWidth=d;for(let i=1;i<10;i++){x.beginPath();x.moveTo(i*W/10,0);x.lineTo(i*W/10,H);x.stroke()}
+  x.beginPath();for(let i=0;i<=W;i++){const t=i/W;i?x.lineTo(i,Y(t)):x.moveTo(i,Y(t))}
+  x.strokeStyle=COL;x.lineWidth=2.5*d;x.stroke();x.fillStyle='#eaf3fa';x.font=(14*d)+'px Tajawal,sans-serif';x.textAlign='center';
+  [['P',.18,-14],['Q',.285,22],['R',.31,-14],['S',.335,22],['T',.55,-14]].forEach(([l,t,o])=>x.fillText(l,t*W,Y(t)+o*d))}}
+
+/* ---- patient + report ---- */
+function updPat(){
+ T('chip','👤 '+(P.name||'مريض تجريبي')+(P.age?' · '+P.age+' سنة':''));
+ const w=+P.w,h=+P.h/100;
+ if(w&&h){const b=w/(h*h);T('pBmi',b.toFixed(1));T('pCat',b<18.5?'نحافة':b<25?'طبيعي':b<30?'زيادة وزن':'سمنة')}else{T('pBmi','--');T('pCat','--')}
+ const a=+P.age;if(a){const m=220-a;T('pMax',m+' BPM');T('pZn',Math.round(m*.5)+' – '+Math.round(m*.7)+' BPM')}else{T('pMax','--');T('pZn','--')}}
+function report(){
+ T('rP',(P.name||'مريض تجريبي')+(P.age?' · '+P.age:'')+(P.sex?' · '+P.sex:''));T('rDt',new Date().toLocaleDateString('ar-IQ'));
+ const el=Math.floor((Date.now()-t0)/1000);T('rD',pad(el/60|0)+':'+pad(el%60));
+ T('rA',cntB?Math.round(sumB/cntB)+' BPM':'--');T('rM',cntB?minB+' / '+maxB:'--');T('rB',beats);T('rS',$('srcl').textContent);T('rO',spoCnt?Math.round(spoSum/spoCnt)+'%':'--')}
+
+/* ---- UI wiring ---- */
+const TTL={live:'المراقبة المباشرة',ana:'التحليل',spo:'الأوكسجين SpO2',pat:'بيانات المريض',dev:'الجهاز والاتصال',rep:'التقرير',lrn:'التعلّم'};
+function go(p){document.querySelectorAll('.pg').forEach(e=>e.classList.toggle('hide',e.id!=='s-'+p));
+ document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('a',b.dataset.p===p));T('ttl',TTL[p]);fit();charts();scrollTo(0,0)}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{if(location.hash==='#'+b.dataset.p)go(b.dataset.p);else location.hash=b.dataset.p});
+function route(){const p=(location.hash||'#live').slice(1);go(TTL[p]?p:'live')}
+addEventListener('hashchange',route);
+function showMode(){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('a',b.dataset.m===S.mode));
+ ['sim','ws','mqtt'].forEach(m=>$('p-'+m).classList.toggle('hide',m!==S.mode))}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;save();showMode();start()});
+$('go').onclick=()=>{S.ip=$('ip').value.trim();S.port=$('port').value.trim()||'81';S.broker=$('broker').value.trim();S.topic=$('topic').value.trim();save();start()};
+$('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'▶ استئناف':'⏸ إيقاف'};
+const snap=()=>cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ecg-'+Date.now()+'.png';a.click()});
+$('snap').onclick=snap;$('snap2').onclick=snap;$('prt').onclick=()=>print();
+$('rhythm').onchange=e=>{S.rhythm=e.target.value;bCount=0;save()};
+$('sbpm').oninput=e=>{S.bpm=+e.target.value;T('bpmv',S.bpm);save()};
+$('noise').oninput=e=>{S.noise=+e.target.value;T('nsv',S.noise);save()};
+$('ssp').oninput=e=>{S.spo=+e.target.value;T('sspv',S.spo);save()};
+$('gain').oninput=e=>{S.gain=+e.target.value;T('gv',S.gain.toFixed(1));save()};
+$('sec').onchange=e=>{S.sec=+e.target.value;initBuf();save()};
+$('rate').onchange=e=>{S.rate=Math.max(50,Math.min(1000,+e.target.value||250));e.target.value=S.rate;save();start()};
+$('bBeep').onclick=e=>{beep=!beep;e.target.classList.toggle('a',beep)};
+if($('bFs'))$('bFs').onclick=()=>{const m=document.querySelector('.mon');document.fullscreenElement?document.exitFullscreen():m.requestFullscreen&&m.requestFullscreen()};
+$('bCol').onclick=()=>{ci=(ci+1)%COLS.length;COL=COLS[ci];document.documentElement.style.setProperty('--ac',COL)};
+if($('bRec'))$('bRec').onclick=e=>{
+ if(!rec){rec=true;recBuf=[];e.target.textContent='⏹ إيقاف';e.target.classList.add('d')}
+ else{rec=false;e.target.textContent='⏺ تسجيل';e.target.classList.remove('d');
+  const csv='sample,time_s,adc\n'+recBuf.map((v,i)=>i+','+(i/S.rate).toFixed(4)+','+v.toFixed(1)).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='ecg-record-'+Date.now()+'.csv';a.click();addLog('تم حفظ التسجيل ('+recBuf.length+' عينة)')}};
+[['pName','name'],['pAge','age'],['pSex','sex'],['pW','w'],['pH','h'],['pNote','note']].forEach(([id,k])=>{$(id).value=P[k]||'';$(id).oninput=e=>{P[k]=e.target.value;save();updPat()}});
+setInterval(()=>T('clk',new Date().toLocaleTimeString('en-GB')),1000);
+
+$('rhythm').value=S.rhythm;$('sbpm').value=S.bpm;T('bpmv',S.bpm);$('noise').value=S.noise;T('nsv',S.noise);$('ssp').value=S.spo;T('sspv',S.spo);
+$('gain').value=S.gain;T('gv',(+S.gain).toFixed(1));$('sec').value=S.sec;$('rate').value=S.rate;
+$('ip').value=S.ip;$('port').value=S.port;$('broker').value=S.broker;$('topic').value=S.topic;
+if(S.mode==='ws'&&location.protocol==='https:')S.mode='sim';
+showMode();updPat();fit();start();nextBeat();requestAnimationFrame(frame);route();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
