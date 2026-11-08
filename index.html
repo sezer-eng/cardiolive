@@ -114,7 +114,7 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
 </nav>
 <main>
 <div class="top">
- <h1><span id="ttl">المراقبة المباشرة</span><small>CardioLive · ESP32 + AD8232</small></h1>
+ <h1><span id="ttl">المراقبة المباشرة</span><small>CardioLive · ESP32 + AD8232 + MAX30102</small></h1>
  <div class="hd"><div class="pill" id="chip">👤 مريض تجريبي</div><div class="pill l" id="clk">--:--:--</div><div class="pill"><span class="dot" id="dot"></span><span id="stx">محاكاة</span></div></div>
 </div>
 
@@ -210,8 +210,8 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
   <div class="kv"><span>الحالة</span><b id="dSt">--</b></div><div class="kv"><span>الحزم/ثانية</span><b id="dPk">0</b></div>
   <div class="kv"><span>آخر حزمة منذ</span><b id="dAge">--</b></div><div class="kv"><span>العينات المستلمة</span><b id="dN">0</b></div>
   <div class="kv"><span>حجم النافذة</span><b id="dBuf">--</b></div></div>
- <div class="card s2"><h3>توصيل AD8232 مع ESP32</h3>
-  <div class="pin"><i style="background:#ff4d6a"></i>OUTPUT ← GPIO34</div><div class="pin"><i style="background:#4ca8ff"></i>3.3V ← 3V3</div><div class="pin"><i style="background:#7d93a8"></i>GND ← GND</div>
+ <div class="card s2"><h3>توصيل الحساسين مع ESP32</h3>
+  <div class="pin"><i style="background:#ff4d6a"></i>AD8232: OUTPUT ← GPIO34</div><div class="pin"><i style="background:#4ca8ff"></i>3.3V ← 3V3</div><div class="pin"><i style="background:#7d93a8"></i>GND ← GND</div>
   <div class="pin"><i style="background:#ffb43a"></i>LO+ ← GPIO32 · LO− ← GPIO33</div>
   <div class="pin"><i style="background:#c06bff"></i>MAX30102: SDA ← GPIO21 · SCL ← GPIO22 · VIN ← 3V3</div><div class="hint">الأقطاب: <b>الأحمر RA</b> أسفل الترقوة اليمنى، <b>الأصفر LA</b> أسفل الترقوة اليسرى، <b>الأخضر RL</b> أسفل الأضلاع اليسرى. شغّل الجهاز على بطارية وليس موصولاً بشاحن الكهرباء.</div></div>
 </section>
@@ -241,7 +241,7 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
   <b>رجفان أذيني:</b> فواصل عشوائية وغياب موجة P.<br><b>PVC:</b> نبضة مبكرة عريضة تتبعها استراحة.<br><b>ارتفاع ST:</b> علامة تحتاج تقييماً طبياً عاجلاً مع الأعراض.</div></div>
  <div class="card s4"><h3>⚠ تنبيه</h3><div class="txt">هذا النظام مشروع تعليمي. حساس AD8232 ليس جهازاً طبياً معتمداً، ولا يصلح للتشخيص. عند ألم الصدر أو الإغماء أو ضيق النفس راجع الطوارئ فوراً.</div></div>
 </section>
-<footer>CardioLive · مشروع هندسي · ESP32 + AD8232</footer>
+<footer>CardioLive · مشروع هندسي · ESP32 + AD8232 + MAX30102</footer>
 </main>
 
 <script>
