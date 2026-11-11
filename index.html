@@ -91,14 +91,28 @@ td.l{direction:ltr;text-align:left;color:var(--ac)}
 footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
 @media(max-width:860px){
  body{display:block}
- #nav{position:fixed;inset:auto 0 0 0;width:100%;height:auto;flex-direction:row;gap:7px;padding:0 10px max(12px,env(safe-area-inset-bottom));border:0;background:none;backdrop-filter:none;justify-content:space-between}
- #nav button{flex:1;min-width:0;background:#0c1624f2;border:1px solid var(--ln);border-radius:18px;box-shadow:0 8px 24px #000a;padding:9px 0}.logo{display:none}
+ #nav{position:fixed;inset:auto 0 0 0;width:100%;height:auto;flex-direction:row;gap:7px;padding:0 10px max(12px,env(safe-area-inset-bottom));border:0;background:none;backdrop-filter:none;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
+ #nav button{flex:0 0 auto;min-width:68px;background:#0c1624f2;border:1px solid var(--ln);border-radius:18px;box-shadow:0 8px 24px #000a;padding:9px 6px}.logo{display:none}
  main{padding:14px 12px 130px}
  .bento{grid-template-columns:1fr 1fr}.s3,.s4{grid-column:span 2}
  .top h1{font-size:20px}
 }
 @media(max-width:520px){.s2{grid-column:span 2}}
-@media print{#nav,.tb,.btn,.top .hd{display:none!important}:root{--tx:#000;--mu:#555;--bg:#fff}body::before{display:none}.card{background:#fff!important;box-shadow:none;border:1px solid #bbb}}
+@media print{#nav,.tb,.btn,.top .hd,#sub,#ft{display:none!important}:root{--tx:#000;--mu:#555;--bg:#fff}html,body{height:auto!important;min-height:0!important;background:#fff!important}body{display:block!important}body::before{display:none}main{padding:0!important;max-width:none!important}.pg{animation:none!important}.card{background:#fff!important;backdrop-filter:none!important;box-shadow:none;border:1px solid #bbb;break-inside:avoid}.top{margin-bottom:10px}}
+@page{margin:12mm}
+body[data-p=rep] #sub,body[data-p=rep] #ft{display:none}
+#nav::-webkit-scrollbar{display:none}
+.chks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.chk{display:flex;align-items:center;gap:8px;margin:0;padding:9px 10px;background:#070e18;border:1px solid var(--ln);border-radius:11px;color:var(--tx);font-size:13px;cursor:pointer}
+.chk input{width:auto;accent-color:var(--ac)}
+.aiLog{display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:52vh;overflow-y:auto;padding:4px 2px}
+.msg{padding:10px 14px;border-radius:16px;max-width:90%;line-height:1.9;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.msg.u{background:var(--ac);color:#04140c;align-self:flex-start}
+.msg.b{background:#0f1c2b;border:1px solid var(--ln);align-self:flex-end}
+.aiRow{display:flex;gap:8px;margin-top:12px;align-items:flex-end}
+.aiRow textarea{flex:1;resize:none;max-height:120px}
+.nw{white-space:nowrap;display:inline-block}
+.aiRow .btn{flex:0 0 auto;min-width:80px}
 </style>
 </head>
 <body>
@@ -109,12 +123,13 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
  <button data-p="spo"><span>🫁</span>الأوكسجين</button>
  <button data-p="pat"><span>🧑‍⚕️</span>المريض</button>
  <button data-p="dev"><span>🔌</span>الجهاز</button>
- <button data-p="rep"><span>📄</span>التقرير</button>
+ <button data-p="rep"><span>📄</span>التقرير الطبي</button>
  <button data-p="lrn"><span>📚</span>التعلّم</button>
+ <button data-p="ai"><span>🤖</span>الذكاء الاصطناعي</button>
 </nav>
 <main>
 <div class="top">
- <h1><span id="ttl">المراقبة المباشرة</span><small>CardioLive · ESP32 + AD8232 + MAX30102</small></h1>
+ <h1><span id="ttl">المراقبة المباشرة</span><small id="sub">CardioLive · ESP32 + AD8232 + MAX30102</small></h1>
  <div class="hd"><div class="pill" id="chip">👤 مريض تجريبي</div><div class="pill l" id="clk">--:--:--</div><div class="pill"><span class="dot" id="dot"></span><span id="stx">محاكاة</span></div></div>
 </div>
 
@@ -172,6 +187,16 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
   <label>الاسم</label><input id="pName" placeholder="الاسم الكامل">
   <div class="g2"><div><label>العمر</label><input id="pAge" type="number" min="1" max="120" class="l"></div><div><label>الجنس</label><select id="pSex"><option value="">—</option><option>ذكر</option><option>أنثى</option></select></div>
   <div><label>الوزن (kg)</label><input id="pW" type="number" class="l"></div><div><label>الطول (cm)</label><input id="pH" type="number" class="l"></div></div>
+  <label>الأمراض المزمنة</label>
+  <select id="pChr"><option value="">—</option><option value="no">لا يوجد لدي أمراض مزمنة</option><option value="yes">يوجد لدي أمراض مزمنة</option></select>
+  <div id="pChrList" class="hide"><div class="chks">
+   <label class="chk"><input type="checkbox" value="حساسية"> حساسية</label>
+   <label class="chk"><input type="checkbox" value="السكري"> السكري</label>
+   <label class="chk"><input type="checkbox" value="ارتفاع ضغط الدم"> ارتفاع ضغط الدم</label>
+   <label class="chk"><input type="checkbox" value="الربو"> الربو</label>
+   <label class="chk"><input type="checkbox" value="أمراض القلب"> أمراض القلب</label>
+   <label class="chk"><input type="checkbox" value="أمراض الكلى"> أمراض الكلى</label>
+  </div><input id="pChrO" placeholder="مرض آخر (اختياري)" style="margin-top:8px"></div>
   <label>ملاحظات</label><textarea id="pNote" rows="3"></textarea>
  </div>
  <div class="card s2"><h3>مؤشرات محسوبة</h3>
@@ -203,6 +228,7 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
  <div class="card s2"><h3>إعدادات العرض</h3>
   <label>التكبير: <b id="gv">1.0</b>x</label><input type="range" id="gain" min="0.3" max="3" step="0.1" value="1">
   <label>عرض الشاشة</label><select id="sec"><option value="4">4 ثواني</option><option value="6">6 ثواني</option><option value="8">8 ثواني</option></select>
+  <label>تحديث الأرقام كل</label><select id="hold"><option value="0">فوري</option><option value="5">5 ثواني</option><option value="10">10 ثواني</option><option value="30">30 ثانية</option></select>
   <label>معدل العينات Hz (يطابق ESP32)</label><input id="rate" type="number" min="50" max="1000" class="l">
   <div class="hint">صيغ الإرسال: رقم <b>2048</b> — أو <b>2048,2051,2060</b> — أو <b>{"v":2048}</b> — والكلمة <b>LO</b> للأقطاب المفصولة. لحساس MAX30102 أرسل <b>{"v":2048,"ir":80000,"red":70000}</b> بمعدل 100Hz.</div>
  </div>
@@ -218,11 +244,10 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
 
 <!-- REPORT -->
 <section id="s-rep" class="pg bento hide">
- <div class="card s2"><h3>ملخص الجلسة</h3>
-  <div class="kv"><span>المريض</span><b id="rP">--</b></div><div class="kv"><span>التاريخ</span><b id="rDt">--</b></div><div class="kv"><span>المدة</span><b id="rD">--</b></div>
+ <div class="card s4"><h3>ملخص الجلسة</h3>
+  <div class="kv"><span>المريض</span><b id="rP">--</b></div><div class="kv"><span>العمر</span><b id="rAge">--</b></div><div class="kv"><span>الجنس</span><b id="rSex">--</b></div><div class="kv"><span>الوزن</span><b id="rW">--</b></div><div class="kv"><span>الطول</span><b id="rH">--</b></div><div class="kv"><span>الأمراض المزمنة</span><b id="rC">--</b></div><div class="kv"><span>التاريخ</span><b id="rDt">--</b></div><div class="kv"><span>المدة</span><b id="rD">--</b></div>
   <div class="kv"><span>متوسط النبض</span><b id="rA">--</b></div><div class="kv"><span>الأدنى / الأعلى</span><b id="rM">--</b></div><div class="kv"><span>عدد النبضات</span><b id="rB">0</b></div><div class="kv"><span>المصدر</span><b id="rS">--</b></div><div class="kv"><span>متوسط الأوكسجين</span><b id="rO">--</b></div>
   <div class="row"><button class="btn p" id="prt">🖨 طباعة التقرير</button><button class="btn" id="snap2">📷 صورة الموجة</button></div></div>
- <div class="card s2"><h3>سجل الأحداث</h3><div id="log" class="log"></div></div>
 </section>
 
 <!-- LEARN -->
@@ -241,13 +266,24 @@ footer{text-align:center;font-size:11px;color:var(--mu);padding:20px 0 4px}
   <b>رجفان أذيني:</b> فواصل عشوائية وغياب موجة P.<br><b>PVC:</b> نبضة مبكرة عريضة تتبعها استراحة.<br><b>ارتفاع ST:</b> علامة تحتاج تقييماً طبياً عاجلاً مع الأعراض.</div></div>
  <div class="card s4"><h3>⚠ تنبيه</h3><div class="txt">هذا النظام مشروع تعليمي. حساس AD8232 ليس جهازاً طبياً معتمداً، ولا يصلح للتشخيص. عند ألم الصدر أو الإغماء أو ضيق النفس راجع الطوارئ فوراً.</div></div>
 </section>
-<footer>CardioLive · مشروع هندسي · ESP32 + AD8232 + MAX30102</footer>
+<section id="s-ai" class="pg bento hide">
+ <div class="card s4"><h3>🤖 الذكاء الاصطناعي</h3>
+  <div id="aiLog" class="aiLog"></div>
+  <div class="aiRow"><textarea id="aiIn" rows="2" placeholder="اكتب سؤالك هنا..."></textarea><button class="btn p" id="aiSend">إرسال</button></div>
+  <div class="row"><button class="btn" id="aiCtx">📎 إرفاق قراءاتي: <span id="aiCtxS" class="nw">غير مفعّل</span></button><button class="btn" id="aiClr">🗑 محادثة جديدة</button></div>
+  <div id="aiUrlBox"><label>رابط موقعك على Netlify</label><input id="aiUrl" class="l" placeholder="https://your-site.netlify.app"><div class="hint">ضروري فقط إذا تفتح الموقع من GitHub Pages. الرد من Gemini، وهو معلومات عامة وليس تشخيصاً طبياً.</div></div>
+ </div>
+</section>
+<footer id="ft">CardioLive · مشروع هندسي · ESP32 + AD8232 + MAX30102</footer>
 </main>
 
 <script>
-const $=id=>document.getElementById(id),T=(id,v)=>{$(id).textContent=v},rnd=()=>Math.random().toString(36).slice(2,8),pad=v=>String(v).padStart(2,'0');
-let S={mode:'sim',rate:250,sec:6,gain:1,bpm:72,noise:20,rhythm:'normal',spo:97,ip:'192.168.1.50',port:'81',broker:'wss://broker.hivemq.com:8884/mqtt',topic:'ecg/'+rnd()};
-let P={name:'',age:'',sex:'',w:'',h:'',note:''};
+const $=id=>document.getElementById(id);
+const GRP={bpm:'E',rr:'E',cls:'E',zone:'E',interp:'E',cnt:'E',aSd:'E',aRm:'E',aPn:'E',aAvg:'E',aMin:'E',aMax:'E',aRR:'E',aBt:'E',rA:'E',rM:'E',rB:'E',sv:'S',lsp:'S',sz:'S',pB:'S',pE:'S',pD:'S',pT:'S',pF:'S',rO:'S'},GT={E:true,S:true},LF={E:0,S:0};
+const T=(id,v)=>{const g=GRP[id];if(g&&!GT[g])return;$(id).textContent=v},ST=(g,id,p,v)=>{if(GT[g])$(id).style[p]=v};
+const rnd=()=>Math.random().toString(36).slice(2,8),pad=v=>String(v).padStart(2,'0');
+let S={mode:'sim',rate:250,sec:6,gain:1,bpm:72,noise:20,rhythm:'normal',spo:97,hold:10,ip:'192.168.1.50',port:'81',broker:'wss://broker.hivemq.com:8884/mqtt',topic:'ecg/'+rnd()};
+let P={name:'',age:'',sex:'',w:'',h:'',note:'',chr:'',chrL:[],chrO:''};
 try{Object.assign(S,JSON.parse(localStorage.getItem('cl_S')||'{}'));Object.assign(P,JSON.parse(localStorage.getItem('cl_P')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('cl_S',JSON.stringify(S));localStorage.setItem('cl_P',JSON.stringify(P))}catch(e){}};
 
@@ -317,7 +353,7 @@ function spoTick(){
  if(s){spoS=spoS?spoS+(s-spoS)*.3:s;spo=Math.round(spoS)}else spo=0;
  const ok=spo>0;T('sv',ok?spo:'--');T('lsp',ok?spo:'--');
  let col='var(--ac)',z='طبيعي';if(spo<90){col='var(--rd)';z='منخفض — يحتاج انتباه'}else if(spo<95){col='var(--am)';z='أقل من الطبيعي'}
- $('sv').style.color=ok?col:'';$('sg').style.stroke=col;$('sg').style.strokeDasharray=ok?((spo-70)/30*326.7)+' 400':'0 400';
+ ST('S','sv','color',ok?col:'');ST('S','sg','stroke',col);ST('S','sg','strokeDasharray',ok?((spo-70)/30*326.7)+' 400':'0 400');
  T('sz',ok?z:(finger?'بانتظار إشارة...':'ضع الإصبع على الحساس'));
  const pb=ppgRR.length>1?Math.round(60/(ppgRR.reduce((a,b)=>a+b,0)/ppgRR.length)):0,eo=curBpm&&performance.now()-curT<3000;
  T('pB',pb||'--');T('pE',eo?curBpm:'--');T('pD',pb&&eo?Math.abs(pb-curBpm)+' BPM':'--');
@@ -342,7 +378,7 @@ function parse(s){
  s=String(s).trim();
  if(s==='LO'||s==='!'){lead(true);return}
  let vals=[];
- if(s[0]==='{'){try{const o=JSON.parse(s);if(o.lo){lead(true);return}const v=o.v!==undefined?o.v:o.ecg;if(o.ir!==undefined&&o.red!==undefined)pushPPG(+o.ir,+o.red);if(o.spo2){spoD=+o.spo2;spoDT=performance.now()}vals=v===undefined?[]:Array.isArray(v)?v:[v]}catch(e){return}}
+ if(s[0]==='{'){try{const o=JSON.parse(s);if(o.ir!==undefined&&o.red!==undefined){const I=[].concat(o.ir),R=[].concat(o.red);for(let i=0;i<I.length;i++)pushPPG(+I[i],+R[i])}if(o.spo2){spoD=+o.spo2;spoDT=performance.now()}if(o.lo){lead(true);return}const v=o.v!==undefined?o.v:o.ecg;vals=v===undefined?[]:Array.isArray(v)?v:[v]}catch(e){return}}
  else vals=s.split(/[\s,;]+/).map(Number);
  lead(false);for(const v of vals)if(isFinite(v))push(v)}
 function stopConn(){wantConn=false;live=false;
@@ -394,16 +430,19 @@ const INT={n:'إيقاع جيبي طبيعي: النبض بين 60 و100 وال�
 function zoneOf(bpm){const a=+P.age;if(!a)return'أدخل العمر لحساب المنطقة';const p=bpm/(220-a);return p<.5?'راحة':p<.7?'نشاط خفيف':p<.85?'نشاط معتدل':'جهد عالٍ'}
 setInterval(()=>{
  const el=Math.floor((Date.now()-t0)/1000);T('tm',pad(el/60|0)+':'+pad(el%60));
+ const nowT=performance.now(),HOLD=(S.hold||0)*1000;
+ GT.E=!HOLD||nowT-LF.E>=HOLD||$('bpm').textContent==='--';if(GT.E)LF.E=nowT;
+ GT.S=!HOLD||nowT-LF.S>=HOLD||$('sv').textContent==='--';if(GT.S)LF.S=nowT;
  const qv=n>S.rate&&!LO?Math.max(0,Math.min(100,Math.round(100-nz*500))):0;
  T('q',n>S.rate?qv+'%':'--');$('qb').style.width=qv+'%';$('qb').style.background=qv>70?'var(--ac)':qv>40?'var(--am)':'var(--rd)';
  const stale=performance.now()-lastBeat>3500||rrs.length<2;
  T('cnt',beats+' نبضة');spoTick();
- if(stale){['bpm','rr','aSd'].forEach(i=>T(i,'--'));T('cls','--');T('zone','--');$('rg').style.strokeDasharray='0 400';T('interp','بانتظار إشارة...');return}
+ if(stale){['bpm','rr','aSd'].forEach(i=>T(i,'--'));T('cls','--');T('zone','--');ST('E','rg','strokeDasharray','0 400');T('interp','بانتظار إشارة...');return}
  const m=rrs.reduce((a,b)=>a+b,0)/rrs.length,bpm=Math.round(60/m),sd=Math.sqrt(rrs.reduce((a,b)=>a+(b-m)**2,0)/rrs.length)*1000;
  let c='طبيعي',col='var(--ac)',k='n';
  if(sd>120){c='غير منتظم';col='var(--rd)';k='i'}else if(bpm<60){c='بطيء';col='var(--bl)';k='b'}else if(bpm>100){c='سريع';col='var(--am)';k='t'}
- T('bpm',bpm);T('rr',Math.round(rrs[rrs.length-1]*1000));T('cls',c);$('cls').style.color=col;
- $('bpm').style.color=col;$('rg').style.stroke=col;$('rg').style.strokeDasharray=(Math.min(bpm,200)/200*326.7)+' 400';
+ T('bpm',bpm);T('rr',Math.round(rrs[rrs.length-1]*1000));T('cls',c);ST('E','cls','color',col);
+ ST('E','bpm','color',col);ST('E','rg','stroke',col);ST('E','rg','strokeDasharray',(Math.min(bpm,200)/200*326.7)+' 400');
  T('zone',zoneOf(bpm));T('interp',INT[k]);
  sumB+=bpm;cntB++;minB=Math.min(minB,bpm);maxB=Math.max(maxB,bpm);
  curBpm=bpm;curT=performance.now();
@@ -425,7 +464,7 @@ setInterval(()=>{ // diagnostics + charts
 /* ---- log / pulse ---- */
 function addLog(m,c){const now=Date.now();if(lastLog[m]&&now-lastLog[m]<15000)return;lastLog[m]=now;
  const d=document.createElement('div');d.className=c||'';d.innerHTML='<time>'+new Date().toLocaleTimeString('en-GB')+'</time>'+m;
- const L=$('log');L.prepend(d);while(L.children.length>60)L.lastChild.remove()}
+ const L=$('log');if(!L)return;L.prepend(d);while(L.children.length>60)L.lastChild.remove()}
 function pulse(){const h=$('hrt');h.classList.remove('on');void h.offsetWidth;h.classList.add('on');
  if(beep){try{ac=ac||new AudioContext();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.value=.05;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.06)}catch(e){}}}
 
@@ -457,14 +496,14 @@ function updPat(){
  if(w&&h){const b=w/(h*h);T('pBmi',b.toFixed(1));T('pCat',b<18.5?'نحافة':b<25?'طبيعي':b<30?'زيادة وزن':'سمنة')}else{T('pBmi','--');T('pCat','--')}
  const a=+P.age;if(a){const m=220-a;T('pMax',m+' BPM');T('pZn',Math.round(m*.5)+' – '+Math.round(m*.7)+' BPM')}else{T('pMax','--');T('pZn','--')}}
 function report(){
- T('rP',(P.name||'مريض تجريبي')+(P.age?' · '+P.age:'')+(P.sex?' · '+P.sex:''));T('rDt',new Date().toLocaleDateString('ar-IQ'));
+ T('rP',P.name||'مريض تجريبي');T('rAge',P.age||'—');T('rSex',P.sex||'—');T('rW',P.w?P.w+' kg':'—');T('rH',P.h?P.h+' cm':'—');T('rC',chrText());T('rDt',new Date().toLocaleDateString('ar-IQ'));
  const el=Math.floor((Date.now()-t0)/1000);T('rD',pad(el/60|0)+':'+pad(el%60));
  T('rA',cntB?Math.round(sumB/cntB)+' BPM':'--');T('rM',cntB?minB+' / '+maxB:'--');T('rB',beats);T('rS',$('srcl').textContent);T('rO',spoCnt?Math.round(spoSum/spoCnt)+'%':'--')}
 
 /* ---- UI wiring ---- */
-const TTL={live:'المراقبة المباشرة',ana:'التحليل',spo:'الأوكسجين SpO2',pat:'بيانات المريض',dev:'الجهاز والاتصال',rep:'التقرير',lrn:'التعلّم'};
+const TTL={live:'المراقبة المباشرة',ana:'التحليل',spo:'الأوكسجين SpO2',pat:'بيانات المريض',dev:'الجهاز والاتصال',rep:'التقرير الطبي',ai:'الذكاء الاصطناعي',lrn:'التعلّم'};
 function go(p){document.querySelectorAll('.pg').forEach(e=>e.classList.toggle('hide',e.id!=='s-'+p));
- document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('a',b.dataset.p===p));T('ttl',TTL[p]);fit();charts();scrollTo(0,0)}
+ document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('a',b.dataset.p===p));T('ttl',TTL[p]);document.body.dataset.p=p;document.title=p==='rep'?'التقرير الطبي':'CardioLive — مراقب ECG';fit();charts();scrollTo(0,0);const ab=document.querySelector('#nav button.a');if(ab&&ab.scrollIntoView)ab.scrollIntoView({inline:'center',block:'nearest'})}
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{if(location.hash==='#'+b.dataset.p)go(b.dataset.p);else location.hash=b.dataset.p});
 function route(){const p=(location.hash||'#live').slice(1);go(TTL[p]?p:'live')}
 addEventListener('hashchange',route);
@@ -481,6 +520,7 @@ $('noise').oninput=e=>{S.noise=+e.target.value;T('nsv',S.noise);save()};
 $('ssp').oninput=e=>{S.spo=+e.target.value;T('sspv',S.spo);save()};
 $('gain').oninput=e=>{S.gain=+e.target.value;T('gv',S.gain.toFixed(1));save()};
 $('sec').onchange=e=>{S.sec=+e.target.value;initBuf();save()};
+$('hold').onchange=e=>{S.hold=+e.target.value;save()};
 $('rate').onchange=e=>{S.rate=Math.max(50,Math.min(1000,+e.target.value||250));e.target.value=S.rate;save();start()};
 $('bBeep').onclick=e=>{beep=!beep;e.target.classList.toggle('a',beep)};
 if($('bFs'))$('bFs').onclick=()=>{const m=document.querySelector('.mon');document.fullscreenElement?document.exitFullscreen():m.requestFullscreen&&m.requestFullscreen()};
@@ -493,8 +533,40 @@ if($('bRec'))$('bRec').onclick=e=>{
 [['pName','name'],['pAge','age'],['pSex','sex'],['pW','w'],['pH','h'],['pNote','note']].forEach(([id,k])=>{$(id).value=P[k]||'';$(id).oninput=e=>{P[k]=e.target.value;save();updPat()}});
 setInterval(()=>T('clk',new Date().toLocaleTimeString('en-GB')),1000);
 
+/* ---- chronic conditions ---- */
+function chrText(){return P.chr==='no'?'لا يوجد لديه أمراض مزمنة':P.chr==='yes'?([...(P.chrL||[]),...(P.chrO?[P.chrO]:[])].join('، ')||'يوجد (غير محدد)'):'غير محدد'}
+function chrShow(){$('pChrList').classList.toggle('hide',P.chr!=='yes')}
+function chrSave(){P.chr=$('pChr').value;P.chrL=[...document.querySelectorAll('#pChrList input[type=checkbox]:checked')].map(c=>c.value);P.chrO=$('pChrO').value.trim();save();chrShow();updPat()}
+function chrInit(){$('pChr').value=P.chr||'';const L=P.chrL||[];document.querySelectorAll('#pChrList input[type=checkbox]').forEach(c=>{c.checked=L.includes(c.value);c.onchange=chrSave});$('pChrO').value=P.chrO||'';$('pChrO').oninput=chrSave;$('pChr').onchange=chrSave;chrShow()}
+chrInit();
+
+/* ---- AI chat (Gemini via Netlify Function) ---- */
+let aiH=[],aiBusy=false,aiCtx=false;
+const aiBase=()=>{const u=(S.aiUrl||'').trim().replace(/\/+$/,'').replace(/\/\.netlify\/functions\/chat$/,'');return u||(location.hostname.endsWith('netlify.app')?location.origin:'')};
+function aiAdd(k,t){const d=document.createElement('div');d.className='msg '+k;d.textContent=t;const L=$('aiLog');L.appendChild(d);L.scrollTop=L.scrollHeight;return d}
+function aiCtxText(){const b=[];if(P.age)b.push('العمر '+P.age);if(P.sex)b.push('الجنس '+P.sex);if(P.w)b.push('الوزن '+P.w+' كغم');if(P.h)b.push('الطول '+P.h+' سم');b.push('أمراض مزمنة: '+chrText());if(curBpm&&performance.now()-curT<5000)b.push('نبض القلب '+curBpm+' BPM');if(spo)b.push('الأوكسجين '+spo+'%');return b.join('، ')}
+async function aiSend(){
+ const t=$('aiIn').value.trim();if(!t||aiBusy)return;
+ const base=aiBase();if(!base){aiAdd('b','اكتب رابط موقعك على Netlify بالخانة تحت أولاً.');return}
+ aiAdd('u',t);$('aiIn').value='';aiH.push({role:'user',text:t});aiBusy=true;$('aiSend').disabled=true;
+ const ph=aiAdd('b','...');
+ try{
+  const r=await fetch(base+'/.netlify/functions/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:aiH.slice(-12),context:aiCtx?aiCtxText():''})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||!d.reply)throw new Error(d.error||('خطأ '+r.status));
+  ph.textContent=d.reply;aiH.push({role:'assistant',text:d.reply});
+ }catch(e){ph.textContent='⚠ '+(e.message||'تعذر الاتصال');aiH.pop()}
+ aiBusy=false;$('aiSend').disabled=false;$('aiLog').scrollTop=$('aiLog').scrollHeight}
+$('aiSend').onclick=aiSend;
+$('aiIn').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend()}};
+$('aiClr').onclick=()=>{aiH=[];$('aiLog').innerHTML='';aiAdd('b','أهلاً! اكتب أي سؤال وأنا أجاوبك.')};
+$('aiCtx').onclick=e=>{aiCtx=!aiCtx;$('aiCtxS').textContent=aiCtx?'مفعّل':'غير مفعّل';e.currentTarget.classList.toggle('p',aiCtx)};
+$('aiUrl').value=S.aiUrl||'';$('aiUrl').oninput=e=>{S.aiUrl=e.target.value.trim();save()};
+if(location.hostname.endsWith('netlify.app'))$('aiUrlBox').classList.add('hide');
+aiAdd('b','أهلاً! اكتب أي سؤال وأنا أجاوبك.');
+
 $('rhythm').value=S.rhythm;$('sbpm').value=S.bpm;T('bpmv',S.bpm);$('noise').value=S.noise;T('nsv',S.noise);$('ssp').value=S.spo;T('sspv',S.spo);
-$('gain').value=S.gain;T('gv',(+S.gain).toFixed(1));$('sec').value=S.sec;$('rate').value=S.rate;
+$('gain').value=S.gain;T('gv',(+S.gain).toFixed(1));$('sec').value=S.sec;$('hold').value=S.hold;$('rate').value=S.rate;
 $('ip').value=S.ip;$('port').value=S.port;$('broker').value=S.broker;$('topic').value=S.topic;
 if(S.mode==='ws'&&location.protocol==='https:')S.mode='sim';
 showMode();updPat();fit();start();nextBeat();requestAnimationFrame(frame);route();
